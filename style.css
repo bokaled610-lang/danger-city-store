@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Danger City Store</title>
+<link rel="icon" href="/assets/dg-logo.jpeg">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <a class="brand" href="/">
+    <img src="/assets/dg-logo.jpeg" alt="DG">
+    <div><b>DANGER <em>CITY</em></b><small>OFFICIAL STORE</small></div>
+  </a>
+  <nav>
+    <button data-category="">الرئيسية</button>
+    <button data-category="house">البيوت</button>
+    <button data-category="hq">المقرات</button>
+    <button data-category="car">السيارات</button>
+    <button data-category="bundle">الباقات</button>
+  </nav>
+  <div id="account"></div>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <span>المتجر الرسمي لـ Danger City</span>
+      <h1>امتلك ما يميزك<br><em>داخل المدينة</em></h1>
+      <p>سيارات، بيوت، مقرات وباقات حصرية بعملة DC.</p>
+      <button onclick="document.querySelector('#store').scrollIntoView()">تصفح المتجر</button>
+    </div>
+    <img src="/assets/dg-logo.jpeg" alt="DG">
+  </section>
+
+  <section class="stats">
+    <article><small>رقم الحساب</small><b id="dcAccount">—</b></article>
+    <article><small>الرصيد</small><b id="balance">0 DC</b></article>
+    <article><small>الرتبة</small><b id="role">مستخدم</b></article>
+    <article><small>الدعم</small><b>24/7</b></article>
+  </section>
+
+  <section id="store">
+    <div class="section-head">
+      <h2>المنتجات</h2>
+      <input id="search" placeholder="ابحث عن منتج...">
+    </div>
+    <div id="products" class="grid"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>
