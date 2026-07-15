@@ -1,12 +1,10 @@
 {
   "name": "danger-city-store",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
-  "description": "Danger City FiveM store production base",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
+    "start": "node server.js",
     "db:init": "node scripts/init-db.js"
   },
   "engines": {

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>إدارة Danger City</title><link rel="stylesheet" href="/style.css">
+<style>main{max-width:1100px;margin:auto;padding:25px}.row{display:grid;grid-template-columns:1fr 160px 160px auto;gap:10px;align-items:center;background:#11151a;border:1px solid #2b3138;padding:12px;border-radius:10px;margin-bottom:8px}.row input,.row select{background:#0e1216;border:1px solid #2b3138;color:white;padding:9px;border-radius:8px}.row button{background:#ff8a00;border:0;padding:9px;border-radius:8px;font-weight:bold}@media(max-width:700px){.row{grid-template-columns:1fr}}</style>
+</head><body><header><a class="brand" href="/"><img src="/assets/dg-logo.jpeg"><div><b>DANGER <em>CITY</em></b><small>ADMIN PANEL</small></div></a></header>
+<main><h1>إدارة المستخدمين والصلاحيات</h1><div id="users"></div></main>
+<script>
+async function api(url,options={}){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"خطأ");return d}
+async function load(){const users=await api("/api/admin/users");document.querySelector("#users").innerHTML=users.map(u=>`<div class="row"><div><b>${u.username}</b><small style="display:block;color:#999">${u.dc_account}</small></div><select id="role-${u.id}"><option value="user">مستخدم</option><option value="support">دعم</option><option value="seller">بائع</option><option value="admin">مدير</option></select><input id="balance-${u.id}" type="number" value="${u.balance}"><button onclick="save('${u.id}')">حفظ</button></div>`).join("");users.forEach(u=>document.querySelector("#role-"+u.id).value=u.role)}
+async function save(id){await api("/api/admin/users/"+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({role:document.querySelector("#role-"+id).value,balance:document.querySelector("#balance-"+id).value})});alert("تم الحفظ")}
+load().catch(e=>document.body.innerHTML+="<p>"+e.message+"</p>");
+</script></body></html>
