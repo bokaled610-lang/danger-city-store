@@ -1,16 +1,24 @@
-NODE_ENV=production
-PORT=3000
-BASE_URL=https://danger-city-store-production.up.railway.app
-SESSION_SECRET=CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_32_CHARS_MINIMUM
-DATABASE_URL=
-DATABASE_SSL=false
-DISCORD_CLIENT_ID=
-DISCORD_CLIENT_SECRET=
-DISCORD_REDIRECT_URI=https://danger-city-store-production.up.railway.app/auth/discord/callback
-OWNER_DISCORD_ID=
-DISCORD_TICKET_URL=https://discord.com
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5-mini
-AI_ENABLED=false
-STORE_CURRENCY=DC
-DEV_LOGIN_ENABLED=false
+{
+  "name": "danger-city-store-phase8",
+  "version": "8.0.0",
+  "private": true,
+  "description": "Danger City Ultimate UI with DG branding, cart, favorites, rewards, live support and smart search",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:init": "node scripts/init-db.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "pg": "^8.13.1"
+  }
+}
