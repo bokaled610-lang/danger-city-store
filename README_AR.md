@@ -1,24 +1,44 @@
-{
-  "name": "danger-city-store-phase8",
-  "version": "8.0.0",
-  "private": true,
-  "description": "Danger City Ultimate UI with DG branding, cart, favorites, rewards, live support and smart search",
-  "main": "src/server.js",
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "db:init": "node scripts/init-db.js"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "connect-pg-simple": "^10.0.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
-    "express-session": "^1.18.1",
-    "helmet": "^8.0.0",
-    "pg": "^8.13.1"
-  }
-}
+# Danger City — المرحلة الثامنة
+
+## المضاف
+- دمج شعار DG الرسمي.
+- شاشة تحميل بالشعار.
+- واجهة Ultimate سوداء وبرتقالية.
+- سلة مشتريات حقيقية.
+- مفضلة.
+- بحث ذكي واقتراحات فورية.
+- ملف مستخدم مختصر.
+- رصيد DC وXP.
+- عجلة حظ يومية.
+- بطاقات هدايا.
+- نقاط ولاء.
+- لوحة أفضل اللاعبين.
+- إشعارات.
+- طلبات متعددة المنتجات.
+- دعم ذكي.
+- فتح تكت Discord.
+- تصميم متجاوب للجوال.
+
+## التشغيل
+1. ثبّت Node.js وPostgreSQL.
+2. انسخ `.env.example` إلى `.env`.
+3. عدّل DATABASE_URL.
+4. شغّل:
+
+```bash
+npm install
+npm run db:init
+npm start
+```
+
+5. افتح:
+
+```text
+http://localhost:3000
+```
+
+## ملاحظات
+- `DEV_LOGIN_ENABLED=true` للتجربة فقط.
+- عند النشر الحقيقي اربط Discord OAuth واجعلها false.
+- AI يحتاج مفتاح API من جهة السيرفر.
+- رابط تكت Discord يوضع في `.env`.
