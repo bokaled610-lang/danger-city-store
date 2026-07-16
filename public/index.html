@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Danger City | المتجر الرسمي</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- شاشة التحميل -->
+  <div id="loader">
+    <div class="loader-logo">DANGER <span>CITY</span></div>
+    <div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
+    <div class="loader-phrase" id="loader-phrase">امتلك ما يميزك داخل المدينة</div>
+  </div>
+
+  <nav>
+    <a class="brand" href="index.html">DANGER <span>CITY</span></a>
+    <div class="nav-links">
+      <a href="index.html" class="active">الرئيسية</a>
+      <a href="store.html">المتجر</a>
+      <a href="dashboard.html" id="nav-dash" style="display:none">حسابي</a>
+      <a href="admin.html" id="nav-admin" style="display:none">الإدارة</a>
+      <button class="btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
+      <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
+      <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <h1>متجر <span>Danger City</span><br />الرسمي</h1>
+    <p>سيارات، بيوت، رتب، وعملات — كل اللي تحتاجه عشان تتميز داخل المدينة، بجودة وسرعة وأمان.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="store.html">تصفح المتجر</a>
+      <a class="btn" href="/auth/discord">سجل دخول بديسكورد</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stat-users">0</b><small>لاعب مسجل</small></div>
+      <div class="stat"><b id="stat-orders">0</b><small>عملية شراء</small></div>
+      <div class="stat"><b id="stat-products">0</b><small>منتج متوفر</small></div>
+    </div>
+  </header>
+
+  <section class="reveal">
+    <h2 class="section-title">منتجات <span>مميزة</span></h2>
+    <p class="section-sub">أكثر المنتجات طلباً في المدينة</p>
+    <div class="grid" id="featured-grid"></div>
+  </section>
+
+  <footer>
+    Danger City Ultimate Store © 2026 — صنع بحب لمدينتنا 🧡
+  </footer>
+
+  <!-- سلة المشتريات -->
+  <aside id="cart-panel">
+    <h2 class="section-title">السلة 🛒</h2>
+    <div id="cart-items"></div>
+    <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" />
+    <div class="cart-total">الإجمالي: <span id="cart-total">0</span>$</div>
+    <button class="btn btn-primary" id="checkout-btn">إتمام الشراء</button>
+    <button class="btn" onclick="toggleCart(false)">إغلاق</button>
+  </aside>
+
+  <div id="toast"></div>
+
+  <script src="js/main.js"></script>
+  <script>
+    loadStats();
+    loadProducts("featured-grid", { featured: "1" });
+  </script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>المتجر | Danger City</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <nav>
+    <a class="brand" href="index.html">DANGER <span>CITY</span></a>
+    <div class="nav-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="store.html" class="active">المتجر</a>
+      <a href="dashboard.html" id="nav-dash" style="display:none">حسابي</a>
+      <a href="admin.html" id="nav-admin" style="display:none">الإدارة</a>
+      <button class="btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
+      <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
+      <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
+    </div>
+  </nav>
+
+  <section>
+    <h2 class="section-title">متجر <span>المدينة</span></h2>
+    <p class="section-sub">اختر القسم أو ابحث عن اللي تبيه</p>
+
+    <div class="filters">
+      <input class="search" id="search-input" placeholder="🔍 ابحث عن منتج…" />
+      <button class="chip active" data-cat="">الكل</button>
+      <button class="chip" data-cat="cars">🏎️ سيارات</button>
+      <button class="chip" data-cat="houses">🏠 بيوت</button>
+      <button class="chip" data-cat="coins">🪙 عملات</button>
+      <button class="chip" data-cat="ranks">👑 رتب</button>
+      <button class="chip" data-cat="bundles">🎁 باقات</button>
+      <button class="chip" data-cat="hq">🏢 مقرات</button>
+      <button class="chip" data-cat="perks">⚡ مزايا</button>
+      <button class="chip" data-cat="services">🛠️ خدمات</button>
+    </div>
+
+    <div class="grid" id="store-grid"></div>
+  </section>
+
+  <footer>Danger City Ultimate Store © 2026</footer>
+
+  <aside id="cart-panel">
+    <h2 class="section-title">السلة 🛒</h2>
+    <div id="cart-items"></div>
+    <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" />
+    <div class="cart-total">الإجمالي: <span id="cart-total">0</span>$</div>
+    <button class="btn btn-primary" id="checkout-btn">إتمام الشراء</button>
+    <button class="btn" onclick="toggleCart(false)">إغلاق</button>
+  </aside>
+
+  <div id="toast"></div>
+
+  <script src="js/main.js"></script>
+  <script>
+    let currentCat = "";
+    function refresh() {
+      const params = {};
+      if (currentCat) params.category = currentCat;
+      const q = document.getElementById("search-input").value.trim();
+      if (q) params.search = q;
+      loadProducts("store-grid", params);
+    }
+    document.querySelectorAll(".chip").forEach((c) => {
+      c.onclick = () => {
+        document.querySelectorAll(".chip").forEach((x) => x.classList.remove("active"));
+        c.classList.add("active");
+        currentCat = c.dataset.cat;
+        refresh();
+      };
+    });
+    let t;
+    document.getElementById("search-input").oninput = () => {
+      clearTimeout(t); t = setTimeout(refresh, 350);
+    };
+    refresh();
+  </script>
+</body>
+</html>

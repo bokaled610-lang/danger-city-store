@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>حسابي | Danger City</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <nav>
+    <a class="brand" href="index.html">DANGER <span>CITY</span></a>
+    <div class="nav-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="store.html">المتجر</a>
+      <a href="dashboard.html" id="nav-dash" class="active">حسابي</a>
+      <a href="admin.html" id="nav-admin" style="display:none">الإدارة</a>
+      <button class="btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
+      <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
+      <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
+    </div>
+  </nav>
+
+  <section>
+    <div class="profile-head" id="profile-head" style="display:none">
+      <img id="profile-avatar" alt="" />
+      <div>
+        <h2 id="profile-name" class="section-title"></h2>
+        <p class="section-sub" style="margin:0">رقم الحساب: <b id="profile-id" style="color:var(--orange)"></b></p>
+      </div>
+      <a class="btn btn-danger" href="/auth/logout" style="margin-inline-start:auto">تسجيل خروج</a>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-card"><small>💰 الرصيد</small><b id="dash-balance">—</b></div>
+      <div class="dash-card"><small>⚡ نقاط XP</small><b id="dash-xp">—</b></div>
+      <div class="dash-card"><small>👑 الرتبة</small><b id="dash-rank">—</b></div>
+      <div class="dash-card"><small>🛒 مشترياتي</small><b id="dash-orders">—</b></div>
+    </div>
+
+    <h2 class="section-title">سجل <span>المشتريات</span></h2>
+    <table>
+      <thead><tr><th>رقم الطلب</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+      <tbody id="orders-body"><tr><td colspan="5">جاري التحميل…</td></tr></tbody>
+    </table>
+  </section>
+
+  <footer>Danger City Ultimate Store © 2026</footer>
+
+  <aside id="cart-panel">
+    <h2 class="section-title">السلة 🛒</h2>
+    <div id="cart-items"></div>
+    <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" />
+    <div class="cart-total">الإجمالي: <span id="cart-total">0</span>$</div>
+    <button class="btn btn-primary" id="checkout-btn">إتمام الشراء</button>
+    <button class="btn" onclick="toggleCart(false)">إغلاق</button>
+  </aside>
+
+  <div id="toast"></div>
+
+  <script src="js/main.js"></script>
+  <script>
+    (async () => {
+      const res = await fetch("/api/me");
+      const { user } = await res.json();
+      if (!user) { location.href = "/auth/discord"; return; }
+
+      document.getElementById("profile-head").style.display = "flex";
+      document.getElementById("profile-avatar").src = user.avatar;
+      document.getElementById("profile-name").textContent = user.username;
+      document.getElementById("profile-id").textContent = "#" + user.id;
+      document.getElementById("dash-balance").textContent = (+user.balance).toFixed(2) + "$";
+      document.getElementById("dash-xp").textContent = user.xp;
+      document.getElementById("dash-rank").textContent = user.rank;
+
+      const oRes = await fetch("/api/orders");
+      const orders = await oRes.json();
+      document.getElementById("dash-orders").textContent = orders.length;
+      document.getElementById("orders-body").innerHTML = orders.length
+        ? orders.map((o) => `
+          <tr>
+            <td>#${o.id}</td>
+            <td>${o.items.map((i) => `${i.name} ×${i.qty}`).join("، ")}</td>
+            <td style="color:var(--orange)">${(+o.total).toFixed(2)}$</td>
+            <td>${o.status === "completed" ? "✅ مكتمل" : o.status}</td>
+            <td>${new Date(o.created_at).toLocaleDateString("ar-KW")}</td>
+          </tr>`).join("")
+        : `<tr><td colspan="5">ما عندك مشتريات — <a href="store.html" style="color:var(--orange)">تصفح المتجر</a></td></tr>`;
+    })();
+  </script>
+</body>
+</html>
