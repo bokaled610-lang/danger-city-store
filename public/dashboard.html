@@ -8,17 +8,22 @@
 </head>
 <body>
 
-  <nav>
-    <a class="brand" href="index.html">DANGER <span>CITY</span></a>
-    <div class="nav-links">
-      <a href="index.html">الرئيسية</a>
-      <a href="store.html">المتجر</a>
-      <a href="dashboard.html" id="nav-dash" class="active">حسابي</a>
-      <a href="admin.html" id="nav-admin" style="display:none">الإدارة</a>
-      <a id="nav-discord" href="#" target="_blank" rel="noopener" style="display:none">💬 ديسكورد</a>
-      <button class="btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
-      <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
+  <nav class="topbar">
+    <a class="brand-block" href="index.html">
+      <span class="logo-badge"><img src="img/logo.png" alt="" onerror="this.style.display='none';this.parentElement.classList.add('nologo')" /></span>
+      <span class="brand-text"><b>متجر Danger City</b><small>DANGER CITY STORE</small></span>
+    </a>
+    <div class="nav-pills">
+      <a href="index.html" class="pill">الرئيسية</a>
+      <a href="store.html" class="pill">المتجر</a>
+      <a id="nav-dash" href="dashboard.html" class="pill active" style="display:none">حسابي</a>
+      <a id="nav-admin" href="admin.html" class="pill" style="display:none">الإدارة</a>
+    </div>
+    <div class="nav-actions">
+      <a id="nav-discord" href="#" target="_blank" rel="noopener" style="display:none" class="icon-btn" title="ديسكورد">💬</a>
+      <a class="btn btn-primary login-cta" id="login-btn" href="/auth/discord">تسجيل الدخول</a>
       <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
+      <button class="icon-btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
     </div>
   </nav>
 

@@ -1,5 +1,5 @@
 /* ============ Danger City Ultimate Store ============ */
-@import url('https://fonts.googleapis.com/css2?family=Changa:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Changa:wght@700;800&family=Almarai:wght@400;700;800&display=swap');
 
 :root {
   --bg: #0b0b0e;
@@ -20,7 +20,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Tajawal', sans-serif;
+  font-family: 'Almarai', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -35,7 +35,7 @@ body::before { /* ambient city glow */
     radial-gradient(600px 400px at 5% 105%, rgba(255,59,59,.08), transparent 60%);
 }
 
-h1, h2, h3, .brand { font-family: 'Changa', sans-serif; }
+h1, h2, h3 { font-family: 'Almarai', sans-serif; font-weight: 800; }
 
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
@@ -328,3 +328,83 @@ footer {
 .trust-card b { display: block; font-family: 'Changa'; }
 .trust-card small { color: var(--muted); }
 @media (max-width: 860px) { .hero-split { grid-template-columns: 1fr; } }
+
+
+/* ============ v7 — Justice-style layout for Danger City ============ */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 12px clamp(16px, 4vw, 48px);
+  background: rgba(11, 11, 14, .85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.brand-block { display: flex; align-items: center; gap: 12px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+.brand-text b { font-family: 'Almarai'; font-weight: 800; font-size: 1.25rem; color: var(--orange); }
+.brand-text small { color: var(--muted); font-size: .62rem; letter-spacing: 3px; font-family: 'Changa'; }
+.logo-badge {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: #16161c; border: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+}
+.logo-badge img { width: 100%; height: 100%; object-fit: contain; }
+.logo-badge.nologo::after {
+  content: 'DC';
+  font-family: 'Changa'; font-weight: 800; font-size: 1.1rem;
+  color: var(--orange); text-shadow: var(--glow);
+}
+.logo-badge.big { width: 84px; height: 84px; border-radius: 16px; }
+.logo-badge.big.nologo::after { font-size: 1.8rem; }
+
+.nav-pills { display: flex; gap: 6px; background: #0f0f13; border: 1px solid rgba(255,255,255,.05); border-radius: 12px; padding: 5px; }
+.pill { padding: 9px 20px; border-radius: 9px; color: var(--muted); font-weight: 700; font-size: .95rem; transition: all .2s; }
+.pill:hover { color: var(--text); }
+.pill.active { background: #1c1c22; color: var(--orange); }
+
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+.login-cta { border-radius: 10px; padding: 11px 26px; font-size: .95rem; }
+.icon-btn {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: #16161c; border: 1px solid var(--glass-border);
+  color: var(--text); font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  cursor: pointer; transition: border-color .2s;
+}
+.icon-btn:hover { border-color: var(--orange); }
+
+/* Reference-scale hero */
+.hero-split { padding: 28px clamp(16px, 4vw, 48px) 40px; gap: 24px; grid-template-columns: 1.45fr 1fr; }
+.hero-main {
+  background: linear-gradient(120deg, #131318 0%, #17130e 100%);
+  border: 1px solid rgba(255,255,255,.05);
+  min-height: 480px;
+  gap: 22px;
+}
+.hero-badge { align-self: flex-start; font-size: .82rem; }
+.hero-split h1 { font-size: clamp(2.6rem, 5.5vw, 4.1rem); font-weight: 800; line-height: 1.25; }
+.hero-split .hero-main p { font-size: 1.08rem; max-width: 520px; color: #b6b1aa; }
+.hero-split .hero-actions { margin-top: auto; }
+.hero-actions .btn { padding: 14px 28px; font-size: 1rem; border-radius: 12px; }
+
+.side-card { padding: 26px; border: 1px solid rgba(255,255,255,.05); background: #101014; }
+.side-card h3 { font-size: 1.35rem; }
+.discord-card { background: linear-gradient(135deg, rgba(255,138,0,.10), #14100b); border: 1px solid rgba(255,138,0,.45); }
+.discord-card h3 { font-size: 1.3rem; }
+.discord-card .btn { padding: 14px; font-size: 1rem; }
+
+.trust-card { background: #101014; border: 1px solid rgba(255,255,255,.05); padding: 22px; }
+.trust-card span {
+  font-size: 1.2rem; min-width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,138,0,.08); border: 1px solid rgba(255,138,0,.35);
+  border-radius: 12px;
+}
+.trust-card b { font-size: 1.05rem; }
+
+@media (max-width: 900px) {
+  .nav-pills { display: none; }
+  .brand-text small { display: none; }
+}
