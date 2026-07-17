@@ -15,6 +15,7 @@
       <a href="store.html">المتجر</a>
       <a href="dashboard.html" id="nav-dash" class="active">حسابي</a>
       <a href="admin.html" id="nav-admin" style="display:none">الإدارة</a>
+      <a id="nav-discord" href="#" target="_blank" rel="noopener" style="display:none">💬 ديسكورد</a>
       <button class="btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
       <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
       <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
@@ -32,11 +33,27 @@
     </div>
 
     <div class="dash-grid">
-      <div class="dash-card"><small>💰 الرصيد</small><b id="dash-balance">—</b></div>
+      <div class="dash-card"><small>💰 رصيد DC</small><b id="dash-balance">—</b></div>
+      <div class="dash-card"><small>💎 رصيد DR</small><b id="dash-dr">—</b></div>
       <div class="dash-card"><small>⚡ نقاط XP</small><b id="dash-xp">—</b></div>
       <div class="dash-card"><small>👑 الرتبة</small><b id="dash-rank">—</b></div>
       <div class="dash-card"><small>🛒 مشترياتي</small><b id="dash-orders">—</b></div>
     </div>
+
+    <h2 class="section-title">استبدال <span>XP</span></h2>
+    <p class="section-sub" id="exchange-sub">كل 10 XP = 1 DR تنضاف لرصيدك — تشتري فيها منتجات DR مثل الخزنات والبيوت المؤقتة</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:32px">
+      <input class="search" id="xp-amount" type="number" min="10" step="10" placeholder="كم XP تبي تستبدل؟" style="max-width:240px" />
+      <button class="btn btn-primary" id="xp-exchange-btn">استبدال</button>
+    </div>
+
+    <h2 class="section-title">رابط <span>الدعوة</span></h2>
+    <p class="section-sub">انسخ رابطك وأرسله لأصدقائك — كل واحد يسجل من رابطك تاخذون 50 XP أنت وهو</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <input class="search" id="ref-link" readonly style="flex:1;min-width:220px" />
+      <button class="btn btn-primary" id="ref-copy">📋 نسخ</button>
+    </div>
+    <p class="section-sub" style="margin-bottom:32px">عدد اللي سجلوا من رابطك: <b id="ref-count" style="color:var(--orange)">0</b></p>
 
     <h2 class="section-title">سجل <span>المشتريات</span></h2>
     <table>
@@ -50,9 +67,12 @@
   <aside id="cart-panel">
     <h2 class="section-title">السلة 🛒</h2>
     <div id="cart-items"></div>
-    <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" />
-    <div class="cart-total">الإجمالي: <span id="cart-total">0</span>$</div>
-    <button class="btn btn-primary" id="checkout-btn">إتمام الشراء</button>
+    <div style="display:flex;gap:8px">
+      <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" style="flex:1" />
+      <button class="btn" id="coupon-apply">تطبيق</button>
+    </div>
+    <div id="cart-totals"><div class="cart-total">الإجمالي: 0 DC</div></div>
+    <button class="btn btn-primary" id="checkout-btn">🎫 فتح تكت شراء</button>
     <button class="btn" onclick="toggleCart(false)">إغلاق</button>
   </aside>
 
@@ -69,9 +89,35 @@
       document.getElementById("profile-avatar").src = user.avatar;
       document.getElementById("profile-name").textContent = user.username;
       document.getElementById("profile-id").textContent = "#" + user.id;
-      document.getElementById("dash-balance").textContent = (+user.balance).toFixed(2) + "$";
+      document.getElementById("dash-balance").textContent = (+user.balance).toFixed(2) + " DC";
+      document.getElementById("dash-dr").textContent = (+user.dr_balance || 0).toFixed(2) + " DR";
       document.getElementById("dash-xp").textContent = user.xp;
       document.getElementById("dash-rank").textContent = user.rank;
+
+      // XP exchange
+      document.getElementById("xp-exchange-btn").onclick = async () => {
+        const xp = +document.getElementById("xp-amount").value;
+        if (!xp || xp < 10) return toast("أقل استبدال 10 XP", true);
+        const r = await fetch("/api/exchange-xp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ xp }),
+        });
+        const d = await r.json();
+        if (d.success) { toast(`✅ انضاف ${d.dr} DR لرصيدك`); setTimeout(() => location.reload(), 1200); }
+        else toast("❌ " + (d.error || "فشل الاستبدال"), true);
+      };
+
+      // Referral link
+      const meRes = await fetch("/api/me");
+      const meData = await meRes.json();
+      const refLink = location.origin + "/r/" + (meData.user.ref_code || "");
+      document.getElementById("ref-link").value = refLink;
+      document.getElementById("ref-count").textContent = meData.refCount || 0;
+      document.getElementById("ref-copy").onclick = () => {
+        navigator.clipboard.writeText(refLink);
+        toast("📋 انسخ الرابط!");
+      };
 
       const oRes = await fetch("/api/orders");
       const orders = await oRes.json();
@@ -81,8 +127,8 @@
           <tr>
             <td>#${o.id}</td>
             <td>${o.items.map((i) => `${i.name} ×${i.qty}`).join("، ")}</td>
-            <td style="color:var(--orange)">${(+o.total).toFixed(2)}$</td>
-            <td>${o.status === "completed" ? "✅ مكتمل" : o.status}</td>
+            <td style="color:var(--orange)">${(+o.total).toFixed(2)} DC</td>
+            <td>${o.status === "completed" ? "✅ مكتمل" : o.status === "ticket" ? "🎫 بانتظار التكت" : o.status}</td>
             <td>${new Date(o.created_at).toLocaleDateString("ar-KW")}</td>
           </tr>`).join("")
         : `<tr><td colspan="5">ما عندك مشتريات — <a href="store.html" style="color:var(--orange)">تصفح المتجر</a></td></tr>`;

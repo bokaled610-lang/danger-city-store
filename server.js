@@ -65,6 +65,14 @@ async function logAction(userId, action, details) {
   }
 }
 
+async function getSettings() {
+  const { rows } = await pool.query("SELECT key, value FROM settings");
+  const out = {};
+  rows.forEach((r) => (out[r.key] = r.value));
+  return out;
+}
+function num(v, def) { const n = +v; return Number.isFinite(n) ? n : def; }
+
 // ---------- Discord OAuth ----------
 app.get("/auth/discord", (req, res) => {
   const params = new URLSearchParams({
@@ -110,15 +118,38 @@ app.get("/auth/discord/callback", async (req, res) => {
       : `https://cdn.discordapp.com/embed/avatars/0.png`;
 
     const result = await pool.query(
-      `INSERT INTO users (discord_id, username, avatar, email)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (discord_id, username, avatar, email, ref_code)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (discord_id)
        DO UPDATE SET username = $2, avatar = $3, email = $4, last_login = NOW()
-       RETURNING *`,
-      [dUser.id, dUser.global_name || dUser.username, avatar, dUser.email || null]
+       RETURNING *, (xmax = 0) AS is_new`,
+      [dUser.id, dUser.global_name || dUser.username, avatar, dUser.email || null, Math.random().toString(36).slice(2, 10)]
     );
 
     const user = result.rows[0];
+
+    // Welcome + referral XP (amounts controlled from admin settings)
+    if (user.is_new) {
+      const st = await getSettings();
+      const welcomeXp = num(st.welcome_xp, 0);
+      if (welcomeXp > 0) {
+        await pool.query("UPDATE users SET xp = xp + $1 WHERE id = $2", [welcomeXp, user.id]);
+      }
+      if (req.session.ref) {
+        const ref = await pool.query(
+          "SELECT id FROM users WHERE ref_code = $1 AND id <> $2",
+          [req.session.ref, user.id]
+        );
+        if (ref.rows.length) {
+          const referrerId = ref.rows[0].id;
+          const refXp = num(st.referral_xp, 50);
+          await pool.query("UPDATE users SET referred_by = $1, xp = xp + $2 WHERE id = $3", [referrerId, refXp, user.id]);
+          await pool.query("UPDATE users SET xp = xp + $1 WHERE id = $2", [refXp, referrerId]);
+          await logAction(referrerId, "referral", `دعوة ناجحة: ${user.username} (+${refXp} XP للطرفين)`);
+        }
+        delete req.session.ref;
+      }
+    }
     req.session.user = {
       id: user.id,
       discord_id: user.discord_id,
@@ -138,11 +169,50 @@ app.get("/auth/logout", (req, res) => {
 });
 
 // ---------- Public API ----------
+app.get("/api/config", async (req, res) => {
+  let st = {};
+  try { st = await getSettings(); } catch (e) {}
+  res.json({
+    invite: process.env.DISCORD_INVITE_URL || "",
+    ticket: process.env.DISCORD_TICKET_URL || "",
+    currency: "DC",
+    announcement: st.announcement || "",
+    xpRate: num(st.xp_rate, 10),
+    minExchange: num(st.min_exchange, 10),
+    referralXp: num(st.referral_xp, 50),
+  });
+});
+
+app.get("/r/:code", (req, res) => {
+  req.session.ref = req.params.code;
+  res.redirect("/");
+});
+
+app.get("/api/coupon/check", async (req, res) => {
+  const code = (req.query.code || "").trim().toUpperCase();
+  if (!code) return res.json({ valid: false });
+  const { rows } = await pool.query(
+    "SELECT percent FROM coupons WHERE code = $1 AND active = TRUE",
+    [code]
+  );
+  if (!rows.length) return res.json({ valid: false });
+  res.json({ valid: true, percent: +rows[0].percent });
+});
+
 app.get("/api/me", async (req, res) => {
   if (!req.session.user) return res.json({ user: null });
-  const { rows } = await pool.query("SELECT id, discord_id, username, avatar, balance, xp, rank FROM users WHERE id = $1", [req.session.user.id]);
+  const { rows } = await pool.query("SELECT id, discord_id, username, avatar, balance, dr_balance, xp, rank, ref_code FROM users WHERE id = $1", [req.session.user.id]);
   const user = rows[0] || null;
-  res.json({ user, isAdmin: user ? ADMIN_IDS.includes(user.discord_id) : false });
+  if (user && !user.ref_code) {
+    user.ref_code = Math.random().toString(36).slice(2, 10);
+    await pool.query("UPDATE users SET ref_code = $1 WHERE id = $2", [user.ref_code, user.id]);
+  }
+  let refCount = 0;
+  if (user) {
+    const rc = await pool.query("SELECT COUNT(*) FROM users WHERE referred_by = $1", [user.id]);
+    refCount = +rc.rows[0].count;
+  }
+  res.json({ user, refCount, isAdmin: user ? ADMIN_IDS.includes(user.discord_id) : false });
 });
 
 app.get("/api/products", async (req, res) => {
@@ -195,17 +265,18 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
     // Fetch real prices from DB (never trust the client)
     const ids = items.map((i) => +i.id);
     const { rows: products } = await client.query(
-      "SELECT id, name, price, discount FROM products WHERE id = ANY($1) AND active = TRUE",
+      "SELECT id, name, price, discount, currency FROM products WHERE id = ANY($1) AND active = TRUE",
       [ids]
     );
     if (products.length !== ids.length) throw new Error("منتج غير موجود");
 
-    let total = 0;
+    let total = 0, totalDr = 0;
     const lines = items.map((i) => {
       const p = products.find((x) => x.id === +i.id);
       const qty = Math.max(1, Math.min(99, +i.qty || 1));
       const price = +p.price * (1 - (+p.discount || 0) / 100);
-      total += price * qty;
+      if ((p.currency || "DC") === "DR") totalDr += price * qty;
+      else total += price * qty;
       return { product_id: p.id, qty, price: price.toFixed(2) };
     });
 
@@ -219,22 +290,12 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
       if (c.length) couponPct = +c[0].percent;
     }
     total = +(total * (1 - couponPct / 100)).toFixed(2);
+    totalDr = +(totalDr * (1 - couponPct / 100)).toFixed(2);
 
-    // Balance check + deduct
-    const { rows: u } = await client.query(
-      "SELECT balance FROM users WHERE id = $1 FOR UPDATE",
-      [req.session.user.id]
-    );
-    if (+u[0].balance < total) throw new Error("رصيدك ما يكفي");
-
-    await client.query(
-      "UPDATE users SET balance = balance - $1, xp = xp + $2 WHERE id = $3",
-      [total, Math.floor(total), req.session.user.id]
-    );
-
+    // Ticket flow: save the order as pending, payment is completed inside the Discord ticket
     const { rows: o } = await client.query(
-      "INSERT INTO orders (user_id, total, status) VALUES ($1, $2, 'completed') RETURNING id",
-      [req.session.user.id, total]
+      "INSERT INTO orders (user_id, total, total_dr, status) VALUES ($1, $2, $3, 'ticket') RETURNING id",
+      [req.session.user.id, total, totalDr]
     );
     for (const l of lines) {
       await client.query(
@@ -244,11 +305,42 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
     }
 
     await client.query("COMMIT");
-    await logAction(req.session.user.id, "purchase", `طلب #${o.rows[0].id} بقيمة ${total}`);
-    res.json({ success: true, orderId: o.rows[0].id, total });
+    await logAction(req.session.user.id, "ticket_order", `تكت شراء #${o.rows[0].id} بقيمة ${total} DC + ${totalDr} DR`);
+    res.json({
+      success: true,
+      orderId: o.rows[0].id,
+      total,
+      totalDr,
+      ticketUrl: process.env.DISCORD_TICKET_URL || process.env.DISCORD_INVITE_URL || "",
+    });
   } catch (err) {
     await client.query("ROLLBACK");
     res.status(400).json({ error: err.message || "فشلت العملية" });
+  } finally {
+    client.release();
+  }
+});
+
+// ---------- XP Exchange (10 XP = 1 DC) ----------
+app.post("/api/exchange-xp", requireAuth, async (req, res) => {
+  const st = await getSettings();
+  const rate = Math.max(1, num(st.xp_rate, 10));
+  const minEx = Math.max(1, num(st.min_exchange, 10));
+  const xp = Math.floor(+req.body.xp || 0);
+  if (xp < minEx) return res.status(400).json({ error: `أقل استبدال ${minEx} XP` });
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query("SELECT xp FROM users WHERE id = $1 FOR UPDATE", [req.session.user.id]);
+    if (+rows[0].xp < xp) throw new Error("نقاطك ما تكفي");
+    const dr = +(xp / rate).toFixed(2);
+    await client.query("UPDATE users SET xp = xp - $1, dr_balance = dr_balance + $2 WHERE id = $3", [xp, dr, req.session.user.id]);
+    await client.query("COMMIT");
+    await logAction(req.session.user.id, "xp_exchange", `استبدال ${xp} XP مقابل ${dr} DR`);
+    res.json({ success: true, dr });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(400).json({ error: err.message || "فشل الاستبدال" });
   } finally {
     client.release();
   }
@@ -268,22 +360,22 @@ app.get("/api/admin/overview", requireAdmin, async (req, res) => {
 });
 
 app.post("/api/admin/products", requireAdmin, async (req, res) => {
-  const { name, description, category, price, image, discount, featured } = req.body;
+  const { name, description, category, price, image, discount, featured, currency } = req.body;
   const { rows } = await pool.query(
-    `INSERT INTO products (name, description, category, price, image, discount, featured)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-    [name, description || "", category, +price, image || "", +discount || 0, !!featured]
+    `INSERT INTO products (name, description, category, price, image, discount, featured, currency)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [name, description || "", category, +price, image || "", +discount || 0, !!featured, currency === "DR" ? "DR" : "DC"]
   );
   await logAction(req.session.user.id, "product_add", `إضافة منتج: ${name}`);
   res.json(rows[0]);
 });
 
 app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
-  const { name, description, category, price, image, discount, featured, active } = req.body;
+  const { name, description, category, price, image, discount, featured, active, currency } = req.body;
   const { rows } = await pool.query(
     `UPDATE products SET name=$1, description=$2, category=$3, price=$4, image=$5,
-     discount=$6, featured=$7, active=$8 WHERE id=$9 RETURNING *`,
-    [name, description, category, +price, image, +discount || 0, !!featured, active !== false, +req.params.id]
+     discount=$6, featured=$7, active=$8, currency=$9 WHERE id=$10 RETURNING *`,
+    [name, description, category, +price, image, +discount || 0, !!featured, active !== false, currency === "DR" ? "DR" : "DC", +req.params.id]
   );
   await logAction(req.session.user.id, "product_edit", `تعديل منتج #${req.params.id}`);
   res.json(rows[0]);
@@ -304,16 +396,16 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/users", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(
-    "SELECT id, discord_id, username, balance, xp, rank, created_at FROM users ORDER BY id DESC LIMIT 100"
+    "SELECT id, discord_id, username, balance, dr_balance, xp, rank, created_at FROM users ORDER BY id DESC LIMIT 100"
   );
   res.json(rows);
 });
 
 app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
-  const { balance, rank } = req.body;
+  const { balance, dr_balance, rank } = req.body;
   const { rows } = await pool.query(
-    "UPDATE users SET balance = $1, rank = $2 WHERE id = $3 RETURNING id, username, balance, rank",
-    [+balance, rank, +req.params.id]
+    "UPDATE users SET balance = $1, dr_balance = $2, rank = $3 WHERE id = $4 RETURNING id, username, balance, dr_balance, rank",
+    [+balance, +dr_balance || 0, rank, +req.params.id]
   );
   await logAction(req.session.user.id, "user_edit", `تعديل مستخدم #${req.params.id}`);
   res.json(rows[0]);
@@ -343,6 +435,24 @@ app.get("/api/admin/logs", requireAdmin, async (req, res) => {
     `SELECT l.*, u.username FROM logs l LEFT JOIN users u ON u.id = l.user_id ORDER BY l.id DESC LIMIT 100`
   );
   res.json(rows);
+});
+
+app.get("/api/admin/settings", requireAdmin, async (req, res) => {
+  res.json(await getSettings());
+});
+
+app.put("/api/admin/settings", requireAdmin, async (req, res) => {
+  const allowed = ["referral_xp", "welcome_xp", "xp_rate", "min_exchange", "purchase_xp_percent", "announcement"];
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) {
+      await pool.query(
+        "INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+        [key, String(req.body[key])]
+      );
+    }
+  }
+  await logAction(req.session.user.id, "settings", "تعديل إعدادات المتجر");
+  res.json(await getSettings());
 });
 
 // ---------- Start ----------

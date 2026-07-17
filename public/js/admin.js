@@ -14,7 +14,37 @@ let ALL_PRODUCTS = [];
   loadAdminUsers();
   loadCoupons();
   loadLogs();
+  loadSettings();
 })();
+
+/* ---------- Settings ---------- */
+const SETTING_KEYS = ["announcement", "referral_xp", "welcome_xp", "xp_rate", "min_exchange"];
+
+async function loadSettings() {
+  const res = await fetch("/api/admin/settings");
+  const st = await res.json();
+  SETTING_KEYS.forEach((k) => {
+    const el = document.getElementById("s-" + k);
+    if (el) el.value = st[k] ?? "";
+  });
+  const btn = document.getElementById("settings-save");
+  if (btn) btn.onclick = saveSettings;
+}
+
+async function saveSettings() {
+  const body = {};
+  SETTING_KEYS.forEach((k) => {
+    const el = document.getElementById("s-" + k);
+    if (el) body[k] = el.value;
+  });
+  const res = await fetch("/api/admin/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) toast("✅ انحفظت الإعدادات");
+  else toast("❌ فشل الحفظ", true);
+}
 
 /* Tabs */
 document.querySelectorAll(".tabs .chip").forEach((c) => {
@@ -31,7 +61,7 @@ async function loadOverview() {
   const o = await res.json();
   document.getElementById("ov-users").textContent = o.users;
   document.getElementById("ov-orders").textContent = o.orders;
-  document.getElementById("ov-revenue").textContent = o.revenue.toFixed(2) + "$";
+  document.getElementById("ov-revenue").textContent = o.revenue.toFixed(2) + " DC";
   document.getElementById("ov-products").textContent = o.products;
 }
 
@@ -44,7 +74,8 @@ async function loadAdminProducts() {
       <td>${p.id}</td>
       <td style="color:var(--text)">${p.name}</td>
       <td>${CATEGORY_NAMES[p.category] || p.category}</td>
-      <td>${(+p.price).toFixed(2)}$</td>
+      <td>${(+p.price).toFixed(2)}</td>
+      <td style="color:var(--orange)">${p.currency || "DC"}</td>
       <td>${+p.discount || 0}%</td>
       <td>${p.featured ? "⭐" : "—"}</td>
       <td>
@@ -62,6 +93,7 @@ function openProductModal(id) {
   document.getElementById("p-name").value = p ? p.name : "";
   document.getElementById("p-desc").value = p ? p.description : "";
   document.getElementById("p-cat").value = p ? p.category : "cars";
+  document.getElementById("p-currency").value = p ? (p.currency || "DC") : "DC";
   document.getElementById("p-price").value = p ? p.price : "";
   document.getElementById("p-discount").value = p ? p.discount : 0;
   document.getElementById("p-image").value = p ? p.image : "";
@@ -78,6 +110,7 @@ async function saveProduct() {
     name: document.getElementById("p-name").value.trim(),
     description: document.getElementById("p-desc").value.trim(),
     category: document.getElementById("p-cat").value,
+    currency: document.getElementById("p-currency").value,
     price: +document.getElementById("p-price").value,
     discount: +document.getElementById("p-discount").value || 0,
     image: document.getElementById("p-image").value.trim(),
@@ -115,8 +148,8 @@ async function loadAdminOrders() {
       <tr>
         <td>#${o.id}</td>
         <td style="color:var(--text)">${o.username}</td>
-        <td style="color:var(--orange)">${(+o.total).toFixed(2)}$</td>
-        <td>${o.status === "completed" ? "✅ مكتمل" : o.status}</td>
+        <td style="color:var(--orange)">${(+o.total).toFixed(2)} DC</td>
+        <td>${o.status === "completed" ? "✅ مكتمل" : o.status === "ticket" ? "🎫 بانتظار التكت" : o.status}</td>
         <td>${new Date(o.created_at).toLocaleString("ar-KW")}</td>
       </tr>`).join("")
     : `<tr><td colspan="5">ما فيه طلبات</td></tr>`;
@@ -131,22 +164,25 @@ async function loadAdminUsers() {
       <td>#${u.id}</td>
       <td style="color:var(--text)">${u.username}</td>
       <td>${u.discord_id}</td>
-      <td>${(+u.balance).toFixed(2)}$</td>
+      <td>${(+u.balance).toFixed(2)}</td>
+      <td style="color:var(--orange)">${(+u.dr_balance || 0).toFixed(2)}</td>
       <td>${u.xp}</td>
       <td>${u.rank}</td>
-      <td><button class="btn" onclick="editUser(${u.id}, ${+u.balance}, '${u.rank}')">تعديل</button></td>
+      <td><button class="btn" onclick="editUser(${u.id}, ${+u.balance}, ${+u.dr_balance || 0}, '${u.rank}')">تعديل</button></td>
     </tr>`).join("");
 }
 
-async function editUser(id, balance, rank) {
-  const newBalance = prompt("الرصيد الجديد:", balance);
+async function editUser(id, balance, dr, rank) {
+  const newBalance = prompt("رصيد DC الجديد:", balance);
   if (newBalance === null) return;
+  const newDr = prompt("رصيد DR الجديد:", dr);
+  if (newDr === null) return;
   const newRank = prompt("الرتبة الجديدة:", rank);
   if (newRank === null) return;
   const res = await fetch(`/api/admin/users/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ balance: +newBalance, rank: newRank }),
+    body: JSON.stringify({ balance: +newBalance, dr_balance: +newDr, rank: newRank }),
   });
   if (res.ok) { toast("✅ تم التعديل"); loadAdminUsers(); }
   else toast("❌ فشل التعديل", true);

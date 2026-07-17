@@ -15,6 +15,7 @@
       <a href="store.html" class="active">المتجر</a>
       <a href="dashboard.html" id="nav-dash" style="display:none">حسابي</a>
       <a href="admin.html" id="nav-admin" style="display:none">الإدارة</a>
+      <a id="nav-discord" href="#" target="_blank" rel="noopener" style="display:none">💬 ديسكورد</a>
       <button class="btn" id="cart-btn">🛒 <span id="cart-count">0</span></button>
       <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
       <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
@@ -46,9 +47,12 @@
   <aside id="cart-panel">
     <h2 class="section-title">السلة 🛒</h2>
     <div id="cart-items"></div>
-    <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" />
-    <div class="cart-total">الإجمالي: <span id="cart-total">0</span>$</div>
-    <button class="btn btn-primary" id="checkout-btn">إتمام الشراء</button>
+    <div style="display:flex;gap:8px">
+      <input class="search" id="coupon-input" placeholder="كود الخصم (اختياري)" style="flex:1" />
+      <button class="btn" id="coupon-apply">تطبيق</button>
+    </div>
+    <div id="cart-totals"><div class="cart-total">الإجمالي: 0 DC</div></div>
+    <button class="btn btn-primary" id="checkout-btn">🎫 فتح تكت شراء</button>
     <button class="btn" onclick="toggleCart(false)">إغلاق</button>
   </aside>
 

@@ -15,6 +15,7 @@
       <a href="store.html">المتجر</a>
       <a href="dashboard.html" id="nav-dash" style="display:none">حسابي</a>
       <a href="admin.html" id="nav-admin" class="active" style="display:none">الإدارة</a>
+      <a id="nav-discord" href="#" target="_blank" rel="noopener" style="display:none">💬 ديسكورد</a>
       <button class="btn" id="cart-btn" style="display:none">🛒 <span id="cart-count">0</span></button>
       <a class="btn btn-primary" id="login-btn" href="/auth/discord">دخول Discord</a>
       <a id="user-chip" style="display:none" href="dashboard.html"><img class="avatar" id="user-avatar" alt="" /></a>
@@ -38,13 +39,14 @@
       <button class="chip" data-tab="users">👥 المستخدمين</button>
       <button class="chip" data-tab="coupons">🏷️ الكوبونات</button>
       <button class="chip" data-tab="logs">📜 السجل</button>
+      <button class="chip" data-tab="settings">⚙️ الإعدادات</button>
     </div>
 
     <!-- المنتجات -->
     <div class="tab-content active" id="tab-products">
       <button class="btn btn-primary" onclick="openProductModal()" style="margin-bottom:16px">+ إضافة منتج</button>
       <table>
-        <thead><tr><th>#</th><th>الاسم</th><th>القسم</th><th>السعر</th><th>الخصم</th><th>مميز</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>الاسم</th><th>القسم</th><th>السعر</th><th>العملة</th><th>الخصم</th><th>مميز</th><th></th></tr></thead>
         <tbody id="products-body"></tbody>
       </table>
     </div>
@@ -60,7 +62,7 @@
     <!-- المستخدمين -->
     <div class="tab-content" id="tab-users">
       <table>
-        <thead><tr><th>#</th><th>الاسم</th><th>Discord ID</th><th>الرصيد</th><th>XP</th><th>الرتبة</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>الاسم</th><th>Discord ID</th><th>DC</th><th>DR</th><th>XP</th><th>الرتبة</th><th></th></tr></thead>
         <tbody id="users-body"></tbody>
       </table>
     </div>
@@ -76,6 +78,33 @@
         <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th></th></tr></thead>
         <tbody id="coupons-body"></tbody>
       </table>
+    </div>
+
+    <!-- الإعدادات -->
+    <div class="tab-content" id="tab-settings">
+      <div style="max-width:520px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="color:var(--muted);font-size:.9rem">📢 إعلان أعلى الصفحة الرئيسية (اتركه فاضي لإخفائه)</label>
+          <input class="search" id="s-announcement" style="width:100%;margin-top:6px" placeholder="مثال: خصم 20% على كل السيارات هالأسبوع!" />
+        </div>
+        <div>
+          <label style="color:var(--muted);font-size:.9rem">🎁 XP لكل دعوة ناجحة (للطرفين)</label>
+          <input class="search" id="s-referral_xp" type="number" min="0" style="width:100%;margin-top:6px" />
+        </div>
+        <div>
+          <label style="color:var(--muted);font-size:.9rem">👋 XP ترحيبية للاعب الجديد</label>
+          <input class="search" id="s-welcome_xp" type="number" min="0" style="width:100%;margin-top:6px" />
+        </div>
+        <div>
+          <label style="color:var(--muted);font-size:.9rem">💎 سعر الاستبدال: كم XP يساوي 1 DR</label>
+          <input class="search" id="s-xp_rate" type="number" min="1" style="width:100%;margin-top:6px" />
+        </div>
+        <div>
+          <label style="color:var(--muted);font-size:.9rem">⬇️ أقل كمية XP للاستبدال</label>
+          <input class="search" id="s-min_exchange" type="number" min="1" style="width:100%;margin-top:6px" />
+        </div>
+        <button class="btn btn-primary" id="settings-save" style="align-self:flex-start">💾 حفظ الإعدادات</button>
+      </div>
     </div>
 
     <!-- السجل -->
@@ -101,7 +130,12 @@
         <option value="bundles">باقات</option><option value="hq">مقرات</option>
         <option value="perks">مزايا</option><option value="services">خدمات</option>
       </select>
-      <label>السعر ($)</label><input id="p-price" type="number" step="0.01" />
+      <label>العملة</label>
+      <select id="p-currency">
+        <option value="DC">DC — العملة الأساسية</option>
+        <option value="DR">DR — عملة النقاط</option>
+      </select>
+      <label>السعر</label><input id="p-price" type="number" step="0.01" />
       <label>الخصم (%)</label><input id="p-discount" type="number" value="0" />
       <label>رابط الصورة (اختياري)</label><input id="p-image" placeholder="https://…" />
       <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p-featured" style="width:auto" /> منتج مميز</label>

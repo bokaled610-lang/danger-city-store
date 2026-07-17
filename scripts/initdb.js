@@ -1,4 +1,4 @@
-// تشغيل: npm run initdb  (مرة وحدة بعد ربط DATABASE_URL)
+// يشتغل تلقائياً قبل تشغيل الموقع — ينشئ الجداول، ويضيف المنتجات التجريبية مرة وحدة فقط
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
@@ -13,11 +13,17 @@ const { Pool } = require("pg");
   });
   try {
     const schema = fs.readFileSync(path.join(__dirname, "../db/schema.sql"), "utf8");
-    const seed = fs.readFileSync(path.join(__dirname, "../db/seed.sql"), "utf8");
     await pool.query(schema);
-    console.log("✅ Schema created");
-    await pool.query(seed);
-    console.log("✅ Seed data inserted");
+    console.log("✅ Schema ready");
+
+    const { rows } = await pool.query("SELECT COUNT(*) FROM products");
+    if (+rows[0].count === 0) {
+      const seed = fs.readFileSync(path.join(__dirname, "../db/seed.sql"), "utf8");
+      await pool.query(seed);
+      console.log("✅ Seed data inserted");
+    } else {
+      console.log("ℹ️ Products already exist, skipping seed");
+    }
   } catch (err) {
     console.error("❌ initdb error:", err.message);
     process.exit(1);

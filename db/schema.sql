@@ -59,3 +59,26 @@ CREATE TABLE IF NOT EXISTS logs (
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+
+-- Referral system columns (safe for existing databases)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_code TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER;
+
+-- DR currency (second currency, earned from XP exchange)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dr_balance NUMERIC(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'DC';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_dr NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+-- Store settings (editable from admin panel)
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+INSERT INTO settings (key, value) VALUES
+  ('referral_xp', '50'),
+  ('welcome_xp', '0'),
+  ('xp_rate', '10'),
+  ('min_exchange', '10'),
+  ('purchase_xp_percent', '100'),
+  ('announcement', '')
+ON CONFLICT (key) DO NOTHING;
