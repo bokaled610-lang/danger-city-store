@@ -4,7 +4,7 @@
   "description": "Danger City Ultimate Store - FiveM server store",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/initdb.js && node server.js",
     "initdb": "node scripts/initdb.js"
   },
   "engines": {
