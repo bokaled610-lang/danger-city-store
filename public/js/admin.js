@@ -168,21 +168,23 @@ async function loadAdminUsers() {
       <td style="color:var(--orange)">${(+u.dr_balance || 0).toFixed(2)}</td>
       <td>${u.xp}</td>
       <td>${u.rank}</td>
-      <td><button class="btn" onclick="editUser(${u.id}, ${+u.balance}, ${+u.dr_balance || 0}, '${u.rank}')">تعديل</button></td>
+      <td><button class="btn" onclick="editUser(${u.id}, ${+u.balance}, ${+u.dr_balance || 0}, ${u.xp}, '${u.rank}')">تعديل</button></td>
     </tr>`).join("");
 }
 
-async function editUser(id, balance, dr, rank) {
+async function editUser(id, balance, dr, xp, rank) {
   const newBalance = prompt("رصيد DC الجديد:", balance);
   if (newBalance === null) return;
   const newDr = prompt("رصيد DR الجديد:", dr);
   if (newDr === null) return;
+  const newXp = prompt("نقاط XP الجديدة:", xp);
+  if (newXp === null) return;
   const newRank = prompt("الرتبة الجديدة:", rank);
   if (newRank === null) return;
   const res = await fetch(`/api/admin/users/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ balance: +newBalance, dr_balance: +newDr, rank: newRank }),
+    body: JSON.stringify({ balance: +newBalance, dr_balance: +newDr, xp: +newXp, rank: newRank }),
   });
   if (res.ok) { toast("✅ تم التعديل"); loadAdminUsers(); }
   else toast("❌ فشل التعديل", true);

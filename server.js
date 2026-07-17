@@ -405,10 +405,10 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
 });
 
 app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
-  const { balance, dr_balance, rank } = req.body;
+  const { balance, dr_balance, xp, rank } = req.body;
   const { rows } = await pool.query(
-    "UPDATE users SET balance = $1, dr_balance = $2, rank = $3 WHERE id = $4 RETURNING id, username, balance, dr_balance, rank",
-    [+balance, +dr_balance || 0, rank, +req.params.id]
+    "UPDATE users SET balance = $1, dr_balance = $2, xp = $3, rank = $4 WHERE id = $5 RETURNING id, username, balance, dr_balance, xp, rank",
+    [+balance, +dr_balance || 0, Math.max(0, Math.floor(+xp || 0)), rank, +req.params.id]
   );
   await logAction(req.session.user.id, "user_edit", `تعديل مستخدم #${req.params.id}`);
   res.json(rows[0]);
