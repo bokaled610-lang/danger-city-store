@@ -263,7 +263,8 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
     await client.query("BEGIN");
 
     // Fetch real prices from DB (never trust the client)
-    const ids = items.map((i) => +i.id);
+    const ids = [...new Set(items.map((i) => +i.id))];
+    if (ids.some((x) => !Number.isFinite(x))) throw new Error("السلة فيها عنصر تالف — فرّغها وجرب من جديد");
     const { rows: products } = await client.query(
       "SELECT id, name, price, discount, currency FROM products WHERE id = ANY($1) AND active = TRUE",
       [ids]
@@ -272,7 +273,8 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
 
     let total = 0, totalDr = 0;
     const lines = items.map((i) => {
-      const p = products.find((x) => x.id === +i.id);
+      const p = products.find((x) => +x.id === +i.id);
+      if (!p) throw new Error("منتج بالسلة ما عاد موجود — فرّغ السلة وجرب من جديد");
       const qty = Math.max(1, Math.min(99, +i.qty || 1));
       const price = +p.price * (1 - (+p.discount || 0) / 100);
       if ((p.currency || "DC") === "DR") totalDr += price * qty;
@@ -315,6 +317,7 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
     });
   } catch (err) {
     await client.query("ROLLBACK");
+    console.error("CHECKOUT ERROR:", err.stack || err);
     res.status(400).json({ error: err.message || "فشلت العملية" });
   } finally {
     client.release();
