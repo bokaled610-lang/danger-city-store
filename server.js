@@ -295,22 +295,23 @@ app.post("/api/checkout", requireAuth, async (req, res) => {
     totalDr = +(totalDr * (1 - couponPct / 100)).toFixed(2);
 
     // Ticket flow: save the order as pending, payment is completed inside the Discord ticket
-    const { rows: o } = await client.query(
+    const orderResult = await client.query(
       "INSERT INTO orders (user_id, total, total_dr, status) VALUES ($1, $2, $3, 'ticket') RETURNING id",
       [req.session.user.id, total, totalDr]
     );
+    const orderId = orderResult.rows[0].id;
     for (const l of lines) {
       await client.query(
         "INSERT INTO order_items (order_id, product_id, qty, price) VALUES ($1, $2, $3, $4)",
-        [o[0].id, l.product_id, l.qty, l.price]
+        [orderId, l.product_id, l.qty, l.price]
       );
     }
 
     await client.query("COMMIT");
-    await logAction(req.session.user.id, "ticket_order", `تكت شراء #${o[0].id} بقيمة ${total} DC + ${totalDr} DR`);
+    await logAction(req.session.user.id, "ticket_order", `تكت شراء #${orderId} بقيمة ${total} DC + ${totalDr} DR`);
     res.json({
       success: true,
-      orderId: o[0].id,
+      orderId,
       total,
       totalDr,
       ticketUrl: process.env.DISCORD_TICKET_URL || process.env.DISCORD_INVITE_URL || "",

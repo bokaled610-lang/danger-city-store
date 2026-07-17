@@ -307,3 +307,24 @@ footer {
   .nav-links { gap: 12px; font-size: .9rem; }
   .stat { padding: 14px 20px; min-width: 110px; }
 }
+
+
+/* ============ Split Hero (v6) ============ */
+.hero-split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; align-items: stretch; text-align: start; max-width: 1200px; margin: 0 auto; min-height: unset; padding: 64px clamp(16px, 4vw, 48px); }
+.hero-main { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: clamp(24px, 4vw, 48px); display: flex; flex-direction: column; justify-content: center; gap: 18px; backdrop-filter: blur(10px); }
+.hero-badge { align-self: flex-start; border: 1px solid var(--glass-border); color: var(--orange); padding: 6px 14px; border-radius: 99px; font-size: .85rem; font-weight: 700; background: rgba(255,138,0,.08); }
+.hero-split h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.2; }
+.hero-split .hero-actions { justify-content: flex-start; }
+.hero-side { display: flex; flex-direction: column; gap: 20px; }
+.side-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 22px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px); }
+.side-card p { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+.side-logo { min-width: 64px; height: 64px; border-radius: 14px; background: linear-gradient(135deg, var(--orange), #ff6a00); color: #16100a; display: flex; align-items: center; justify-content: center; font-family: 'Changa'; font-weight: 800; font-size: 1.5rem; box-shadow: var(--glow); }
+.discord-card { flex-direction: column; align-items: stretch; gap: 10px; flex: 1; border-color: rgba(255,138,0,.35); justify-content: center; }
+.discord-card .btn { justify-content: center; }
+.trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding-top: 0; }
+.trust-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 18px 20px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(10px); transition: transform .2s, border-color .2s; }
+.trust-card:hover { transform: translateY(-3px); border-color: var(--orange); }
+.trust-card span { font-size: 1.7rem; }
+.trust-card b { display: block; font-family: 'Changa'; }
+.trust-card small { color: var(--muted); }
+@media (max-width: 860px) { .hero-split { grid-template-columns: 1fr; } }

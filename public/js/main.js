@@ -23,6 +23,10 @@ async function loadConfig() {
       loaderBtn.href = CONFIG.invite;
       loaderBtn.style.display = "inline-flex";
     }
+    ["hero-join", "side-join"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && CONFIG.invite) el.href = CONFIG.invite;
+    });
     const navDiscord = document.getElementById("nav-discord");
     if (navDiscord && CONFIG.invite) {
       navDiscord.href = CONFIG.invite;

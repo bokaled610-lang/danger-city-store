@@ -30,19 +30,46 @@
     </div>
   </nav>
 
-  <header class="hero">
-    <h1>متجر <span>Danger City</span><br />الرسمي</h1>
-    <p>سيارات، بيوت، رتب، وعملات — كل اللي تحتاجه عشان تتميز داخل المدينة، بجودة وسرعة وأمان.</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="store.html">تصفح المتجر</a>
-      <a class="btn" href="/auth/discord">سجل دخول بديسكورد</a>
+  <header class="hero hero-split">
+    <div class="hero-main">
+      <span class="hero-badge">● المتجر الرسمي لمدينة Danger City</span>
+      <h1>ابدأ رحلتك داخل<br /><span>Danger City</span></h1>
+      <p>متجر المدينة الرسمي — سيارات، بيوت، رتب، وعملات حصرية. جودة وسرعة وأمان لتبدأ تجربتك بأفضل شكل ممكن.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="store.html">⚡ تصفح المتجر</a>
+        <a class="btn" id="hero-join" href="#" target="_blank" rel="noopener">▶ دخول السيرفر</a>
+      </div>
     </div>
-    <div class="stats">
+    <div class="hero-side">
+      <div class="side-card">
+        <div class="side-logo">DC</div>
+        <div>
+          <h3>مدينة Danger City</h3>
+          <p>خدمات ومزايا حصرية لمجتمع المدينة</p>
+        </div>
+      </div>
+      <div class="side-card discord-card">
+        <h3>💬 مركز المجتمع</h3>
+        <p>تابع آخر الإعلانات والتحديثات وتواصل مع أعضاء وإدارة المدينة.</p>
+        <a class="btn btn-primary" id="side-join" href="#" target="_blank" rel="noopener">انضم إلينا الآن ←</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="trust-grid reveal">
+    <div class="trust-card"><span>🛡️</span><div><b>خدمات موثوقة</b><small>اعتماد رسمي وآمن بالكامل</small></div></div>
+    <div class="trust-card"><span>⚡</span><div><b>تنفيذ سريع</b><small>معالجة طلبك دون تأخير</small></div></div>
+    <div class="trust-card"><span>👑</span><div><b>مزايا حصرية</b><small>خصائص مخصصة لأعضاء المجتمع</small></div></div>
+    <div class="trust-card"><span>🎧</span><div><b>دعم مستمر</b><small>متواجدون دائماً لمساعدتك</small></div></div>
+  </section>
+
+  <section class="reveal" style="padding-top:0;padding-bottom:0">
+    <div class="stats" style="margin-top:0">
       <div class="stat"><b id="stat-users">0</b><small>لاعب مسجل</small></div>
       <div class="stat"><b id="stat-orders">0</b><small>عملية شراء</small></div>
       <div class="stat"><b id="stat-products">0</b><small>منتج متوفر</small></div>
     </div>
-  </header>
+  </section>
 
   <section class="reveal">
     <h2 class="section-title">منتجات <span>مميزة</span></h2>
