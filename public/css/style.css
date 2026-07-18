@@ -408,3 +408,44 @@ footer {
   .nav-pills { display: none; }
   .brand-text small { display: none; }
 }
+
+/* ============ شاشة ربط الحساب الإجبارية ============ */
+#auth-gate {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(11, 11, 14, 0.92);
+  backdrop-filter: blur(14px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.gate-card {
+  text-align: center;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 44px 36px;
+  max-width: 440px; width: 100%;
+  box-shadow: var(--glow);
+}
+.gate-logo {
+  font-family: 'Changa', sans-serif;
+  font-size: 2rem; font-weight: 800; margin-bottom: 18px;
+}
+.gate-logo span { color: var(--orange); text-shadow: var(--glow); }
+.gate-card h2 { margin-bottom: 10px; font-size: 1.35rem; }
+.gate-card p { color: var(--muted); margin-bottom: 24px; line-height: 1.7; }
+.gate-btn { font-size: 1.05rem; padding: 13px 26px; }
+
+/* ============ إطار الرتبة (برتقالي شفاف) ============ */
+#user-chip.rank-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px 4px 6px;
+  background: rgba(255, 138, 0, 0.12);
+  border: 1.5px solid rgba(255, 138, 0, 0.45);
+  border-radius: 99px;
+}
+#user-chip.rank-chip .rank-name {
+  color: var(--orange);
+  font-weight: 800;
+  font-size: .88rem;
+  white-space: nowrap;
+}

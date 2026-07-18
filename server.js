@@ -42,16 +42,52 @@ const ADMIN_IDS = (process.env.DISCORD_ADMIN_IDS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   if (!req.session.user) return res.status(401).json({ error: "غير مسجل دخول" });
+  const { rows } = await pool.query("SELECT banned FROM users WHERE id = $1", [req.session.user.id]);
+  if (rows[0] && rows[0].banned) {
+    req.session.destroy(() => {});
+    return res.status(403).json({ error: "حسابك محظور" });
+  }
   next();
 }
 
-function requireAdmin(req, res, next) {
-  if (!req.session.user) return res.status(401).json({ error: "غير مسجل دخول" });
-  if (!ADMIN_IDS.includes(req.session.user.discord_id))
-    return res.status(403).json({ error: "ما عندك صلاحية أدمن" });
-  next();
+// الصلاحيات: product = إضافة منتج | ranks = إعطاء رتب وصلاحيات | xp = إعطاء XP | ban = حظر لاعب
+const ALL_PERMS = ["product", "ranks", "xp", "ban"];
+
+async function getStaff(discordId) {
+  if (ADMIN_IDS.includes(discordId))
+    return { rank: "أونر", rank_order: 0, perms: ALL_PERMS, owner: true };
+  const { rows } = await pool.query(
+    "SELECT rank, rank_order, perms FROM staff WHERE discord_id = $1",
+    [discordId]
+  );
+  if (!rows.length) return null;
+  return {
+    rank: rows[0].rank,
+    rank_order: rows[0].rank_order,
+    perms: (rows[0].perms || "").split(",").map((s) => s.trim()).filter(Boolean),
+    owner: false,
+  };
+}
+
+function requirePerm(perm) {
+  return async (req, res, next) => {
+    if (!req.session.user) return res.status(401).json({ error: "غير مسجل دخول" });
+    const st = await getStaff(req.session.user.discord_id);
+    if (!st) return res.status(403).json({ error: "ما عندك صلاحية أدمن" });
+    if (perm && !st.owner && !st.perms.includes(perm))
+      return res.status(403).json({ error: "ما عندك هالصلاحية" });
+    req.staff = st;
+    next();
+  };
+}
+const requireAdmin = requirePerm(null); // أي إداري
+function requireOwner(req, res, next) {
+  requirePerm(null)(req, res, () => {
+    if (!req.staff.owner) return res.status(403).json({ error: "هالشي للأونر فقط" });
+    next();
+  });
 }
 
 async function logAction(userId, action, details) {
@@ -128,6 +164,9 @@ app.get("/auth/discord/callback", async (req, res) => {
 
     const user = result.rows[0];
 
+    // محظور؟ ما يدخل
+    if (user.banned) return res.redirect("/?error=banned");
+
     // Welcome + referral XP (amounts controlled from admin settings)
     if (user.is_new) {
       const st = await getSettings();
@@ -201,8 +240,12 @@ app.get("/api/coupon/check", async (req, res) => {
 
 app.get("/api/me", async (req, res) => {
   if (!req.session.user) return res.json({ user: null });
-  const { rows } = await pool.query("SELECT id, discord_id, username, avatar, balance, dr_balance, xp, rank, ref_code FROM users WHERE id = $1", [req.session.user.id]);
+  const { rows } = await pool.query("SELECT id, discord_id, username, avatar, dr_balance, xp, rank, ref_code, banned FROM users WHERE id = $1", [req.session.user.id]);
   const user = rows[0] || null;
+  if (user && user.banned) {
+    req.session.destroy(() => {});
+    return res.json({ user: null, banned: true });
+  }
   if (user && !user.ref_code) {
     user.ref_code = Math.random().toString(36).slice(2, 10);
     await pool.query("UPDATE users SET ref_code = $1 WHERE id = $2", [user.ref_code, user.id]);
@@ -212,7 +255,15 @@ app.get("/api/me", async (req, res) => {
     const rc = await pool.query("SELECT COUNT(*) FROM users WHERE referred_by = $1", [user.id]);
     refCount = +rc.rows[0].count;
   }
-  res.json({ user, refCount, isAdmin: user ? ADMIN_IDS.includes(user.discord_id) : false });
+  const st = user ? await getStaff(user.discord_id) : null;
+  res.json({
+    user,
+    refCount,
+    isAdmin: !!st,
+    isOwner: !!(st && st.owner),
+    perms: st ? st.perms : [],
+    staffRank: st ? st.rank : null,
+  });
 });
 
 app.get("/api/products", async (req, res) => {
@@ -363,7 +414,7 @@ app.get("/api/admin/overview", requireAdmin, async (req, res) => {
   });
 });
 
-app.post("/api/admin/products", requireAdmin, async (req, res) => {
+app.post("/api/admin/products", requirePerm("product"), async (req, res) => {
   const { name, description, category, price, image, discount, featured, currency } = req.body;
   const { rows } = await pool.query(
     `INSERT INTO products (name, description, category, price, image, discount, featured, currency)
@@ -374,7 +425,7 @@ app.post("/api/admin/products", requireAdmin, async (req, res) => {
   res.json(rows[0]);
 });
 
-app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
+app.put("/api/admin/products/:id", requirePerm("product"), async (req, res) => {
   const { name, description, category, price, image, discount, featured, active, currency } = req.body;
   const { rows } = await pool.query(
     `UPDATE products SET name=$1, description=$2, category=$3, price=$4, image=$5,
@@ -385,7 +436,7 @@ app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
   res.json(rows[0]);
 });
 
-app.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/products/:id", requirePerm("product"), async (req, res) => {
   await pool.query("UPDATE products SET active = FALSE WHERE id = $1", [+req.params.id]);
   await logAction(req.session.user.id, "product_delete", `حذف منتج #${req.params.id}`);
   res.json({ success: true });
@@ -400,19 +451,92 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
 
 app.get("/api/admin/users", requireAdmin, async (req, res) => {
   const { rows } = await pool.query(
-    "SELECT id, discord_id, username, balance, dr_balance, xp, rank, created_at FROM users ORDER BY id DESC LIMIT 100"
+    "SELECT id, discord_id, username, dr_balance, xp, rank, banned, created_at FROM users ORDER BY id DESC LIMIT 100"
   );
   res.json(rows);
 });
 
-app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
-  const { balance, dr_balance, xp, rank } = req.body;
+// تعديل رتبة/رصيد DR — يحتاج صلاحية "ranks"
+app.put("/api/admin/users/:id", requirePerm("ranks"), async (req, res) => {
+  const { dr_balance, rank } = req.body;
   const { rows } = await pool.query(
-    "UPDATE users SET balance = $1, dr_balance = $2, xp = $3, rank = $4 WHERE id = $5 RETURNING id, username, balance, dr_balance, xp, rank",
-    [+balance, +dr_balance || 0, Math.max(0, Math.floor(+xp || 0)), rank, +req.params.id]
+    "UPDATE users SET dr_balance = $1, rank = $2 WHERE id = $3 RETURNING id, username, dr_balance, xp, rank",
+    [+dr_balance || 0, (rank || "مواطن").trim(), +req.params.id]
   );
-  await logAction(req.session.user.id, "user_edit", `تعديل مستخدم #${req.params.id}`);
+  await logAction(req.session.user.id, "user_edit", `تعديل مستخدم #${req.params.id} (رتبة: ${rows[0]?.rank})`);
   res.json(rows[0]);
+});
+
+// إعطاء XP — يحتاج صلاحية "xp"
+app.post("/api/admin/users/:id/xp", requirePerm("xp"), async (req, res) => {
+  const amount = Math.floor(+req.body.amount || 0);
+  if (!amount) return res.status(400).json({ error: "اكتب كمية XP" });
+  const { rows } = await pool.query(
+    "UPDATE users SET xp = GREATEST(0, xp + $1) WHERE id = $2 RETURNING id, username, xp",
+    [amount, +req.params.id]
+  );
+  await logAction(req.session.user.id, "xp_give", `${amount > 0 ? "إعطاء" : "خصم"} ${Math.abs(amount)} XP للمستخدم #${req.params.id}`);
+  res.json(rows[0]);
+});
+
+// حظر / فك حظر — يحتاج صلاحية "ban"
+app.post("/api/admin/users/:id/ban", requirePerm("ban"), async (req, res) => {
+  const target = await pool.query("SELECT discord_id FROM users WHERE id = $1", [+req.params.id]);
+  if (!target.rows.length) return res.status(404).json({ error: "المستخدم غير موجود" });
+  if (ADMIN_IDS.includes(target.rows[0].discord_id))
+    return res.status(403).json({ error: "ما تقدر تحظر الأونر 😅" });
+  const banned = !!req.body.banned;
+  const { rows } = await pool.query(
+    "UPDATE users SET banned = $1 WHERE id = $2 RETURNING id, username, banned",
+    [banned, +req.params.id]
+  );
+  await logAction(req.session.user.id, banned ? "ban" : "unban", `${banned ? "حظر" : "فك حظر"} المستخدم #${req.params.id}`);
+  res.json(rows[0]);
+});
+
+// ---------- Staff API (لوق الإدارة + التوظيف) ----------
+app.get("/api/admin/staff", requireAdmin, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT s.*, u.username, u.avatar FROM staff s
+     LEFT JOIN users u ON u.discord_id = s.discord_id
+     ORDER BY s.rank_order ASC, s.id ASC`
+  );
+  const owners = [];
+  for (const oid of ADMIN_IDS) {
+    const u = await pool.query("SELECT username, avatar FROM users WHERE discord_id = $1", [oid]);
+    owners.push({
+      id: 0, discord_id: oid, rank: "أونر", rank_order: 0, perms: ALL_PERMS.join(","),
+      owner: true, username: u.rows[0]?.username || "الأونر", avatar: u.rows[0]?.avatar || "",
+    });
+  }
+  res.json([...owners, ...rows]);
+});
+
+app.post("/api/admin/staff", requirePerm("ranks"), async (req, res) => {
+  const discord_id = (req.body.discord_id || "").trim();
+  const rank = (req.body.rank || "إداري").trim();
+  const rank_order = Math.max(1, Math.floor(+req.body.rank_order || 100));
+  const perms = (Array.isArray(req.body.perms) ? req.body.perms : [])
+    .filter((p) => ALL_PERMS.includes(p)).join(",");
+  if (!/^[0-9]{15,25}$/.test(discord_id))
+    return res.status(400).json({ error: "آيدي الديسكورد غير صحيح" });
+  if (ADMIN_IDS.includes(discord_id))
+    return res.status(400).json({ error: "هذا أونر أصلاً وعنده كل الصلاحيات" });
+  const { rows } = await pool.query(
+    `INSERT INTO staff (discord_id, rank, rank_order, perms, added_by)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (discord_id) DO UPDATE SET rank=$2, rank_order=$3, perms=$4
+     RETURNING *`,
+    [discord_id, rank, rank_order, perms, req.session.user.discord_id]
+  );
+  await logAction(req.session.user.id, "staff_hire", `توظيف/تعديل إداري ${discord_id} — رتبة: ${rank}`);
+  res.json(rows[0]);
+});
+
+app.delete("/api/admin/staff/:id", requirePerm("ranks"), async (req, res) => {
+  await pool.query("DELETE FROM staff WHERE id = $1", [+req.params.id]);
+  await logAction(req.session.user.id, "staff_remove", `إزالة إداري #${req.params.id}`);
+  res.json({ success: true });
 });
 
 app.get("/api/admin/coupons", requireAdmin, async (req, res) => {
@@ -420,7 +544,7 @@ app.get("/api/admin/coupons", requireAdmin, async (req, res) => {
   res.json(rows);
 });
 
-app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
+app.post("/api/admin/coupons", requireOwner, async (req, res) => {
   const { code, percent } = req.body;
   const { rows } = await pool.query(
     "INSERT INTO coupons (code, percent) VALUES ($1, $2) ON CONFLICT (code) DO UPDATE SET percent = $2, active = TRUE RETURNING *",
@@ -429,7 +553,7 @@ app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
   res.json(rows[0]);
 });
 
-app.delete("/api/admin/coupons/:id", requireAdmin, async (req, res) => {
+app.delete("/api/admin/coupons/:id", requireOwner, async (req, res) => {
   await pool.query("UPDATE coupons SET active = FALSE WHERE id = $1", [+req.params.id]);
   res.json({ success: true });
 });
@@ -445,7 +569,7 @@ app.get("/api/admin/settings", requireAdmin, async (req, res) => {
   res.json(await getSettings());
 });
 
-app.put("/api/admin/settings", requireAdmin, async (req, res) => {
+app.put("/api/admin/settings", requireOwner, async (req, res) => {
   const allowed = ["referral_xp", "welcome_xp", "xp_rate", "min_exchange", "purchase_xp_percent", "announcement"];
   for (const key of allowed) {
     if (req.body[key] !== undefined) {

@@ -85,24 +85,54 @@ function toast(msg, isError = false) {
 
 /* ---------- Auth state ---------- */
 let ME = null;
+let ME_DATA = { perms: [], isAdmin: false, isOwner: false };
+
+/* شاشة إجبارية: اربط حسابك بديسكورد Danger City */
+function showAuthGate(isBanned) {
+  if (document.getElementById("auth-gate")) return;
+  const gate = document.createElement("div");
+  gate.id = "auth-gate";
+  gate.innerHTML = isBanned
+    ? `
+      <div class="gate-card">
+        <div class="gate-logo">DANGER <span>CITY</span></div>
+        <h2>🚫 حسابك محظور</h2>
+        <p>تم حظرك من متجر Danger City. إذا تشوف إن فيه خطأ، افتح تكت في الديسكورد وكلم الإدارة.</p>
+      </div>`
+    : `
+      <div class="gate-card">
+        <div class="gate-logo">DANGER <span>CITY</span></div>
+        <h2>اربط حسابك بديسكورد Danger City</h2>
+        <p>لازم تربط حسابك عشان تدخل المتجر وتشوف المنتجات وتشتري</p>
+        <a class="btn btn-primary gate-btn" href="/auth/discord">💬 ربط الحساب بديسكورد</a>
+      </div>`;
+  document.body.appendChild(gate);
+}
+
 async function loadMe() {
   try {
     const res = await fetch("/api/me");
     const data = await res.json();
     ME = data.user;
+    ME_DATA = data;
     if (ME) {
       document.getElementById("login-btn").style.display = "none";
       const chip = document.getElementById("user-chip");
-      chip.style.display = "block";
-      document.getElementById("user-avatar").src = ME.avatar;
+      chip.style.display = "flex";
+      chip.classList.add("rank-chip");
+      chip.innerHTML = `<img class="avatar" src="${ME.avatar}" alt="" /><span class="rank-name">${ME.rank || "مواطن"}</span>`;
       const dash = document.getElementById("nav-dash");
       if (dash) dash.style.display = "inline";
       if (data.isAdmin) {
         const adm = document.getElementById("nav-admin");
         if (adm) adm.style.display = "inline";
       }
+    } else {
+      showAuthGate(!!data.banned);
     }
-  } catch (e) { /* not logged in */ }
+  } catch (e) {
+    showAuthGate(false);
+  }
 }
 loadMe();
 

@@ -2,20 +2,102 @@
 
 let ALL_PRODUCTS = [];
 
+let PERMS = [];
+let IS_OWNER = false;
+const can = (p) => IS_OWNER || PERMS.includes(p);
+
 (async function init() {
   const res = await fetch("/api/me");
   const data = await res.json();
   if (!data.user) { location.href = "/auth/discord"; return; }
   if (!data.isAdmin) { location.href = "/"; return; }
+  PERMS = data.perms || [];
+  IS_OWNER = !!data.isOwner;
+
+  // إخفاء الأزرار والتبويبات حسب الصلاحيات
+  if (!can("product")) {
+    const addBtn = document.querySelector('#tab-products > .btn');
+    if (addBtn) addBtn.style.display = "none";
+  }
+  if (!IS_OWNER) {
+    ["coupons", "settings"].forEach((t) => {
+      const chip = document.querySelector(`.tabs .chip[data-tab="${t}"]`);
+      if (chip) chip.style.display = "none";
+    });
+  }
+  if (can("ranks")) {
+    const hb = document.getElementById("hire-box");
+    if (hb) hb.style.display = "block";
+  }
 
   loadOverview();
   loadAdminProducts();
   loadAdminOrders();
   loadAdminUsers();
-  loadCoupons();
+  loadStaff();
+  if (IS_OWNER) loadCoupons();
   loadLogs();
-  loadSettings();
+  if (IS_OWNER) loadSettings();
 })();
+
+/* ---------- الإدارة (لوق + توظيف) ---------- */
+const PERM_NAMES = { product: "إضافة منتج", ranks: "رتب وصلاحيات", xp: "إعطاء XP", ban: "حظر" };
+
+async function loadStaff() {
+  const res = await fetch("/api/admin/staff");
+  const staff = await res.json();
+  document.getElementById("staff-body").innerHTML = staff.length
+    ? staff.map((st) => `
+      <tr>
+        <td style="color:var(--orange);font-weight:800">${st.owner ? "👑 " : ""}${st.rank}</td>
+        <td style="color:var(--text)">${st.username || "—"}</td>
+        <td>${st.discord_id}</td>
+        <td>${st.owner ? "كل الصلاحيات" : ((st.perms || "").split(",").filter(Boolean).map((p) => PERM_NAMES[p] || p).join("، ") || "—")}</td>
+        <td>${!st.owner && can("ranks") ? `
+          <button class="btn" onclick="editStaff('${st.discord_id}', '${(st.rank || "").replace(/'/g, "\\'")}', ${st.rank_order}, '${st.perms || ""}')">تعديل</button>
+          <button class="btn btn-danger" onclick="removeStaff(${st.id})">إزالة</button>` : ""}
+        </td>
+      </tr>`).join("")
+    : `<tr><td colspan="5">ما فيه إداريين بعد</td></tr>`;
+}
+
+function editStaff(discordId, rank, order, perms) {
+  document.getElementById("h-discord").value = discordId;
+  document.getElementById("h-rank").value = rank;
+  document.getElementById("h-order").value = order;
+  const list = (perms || "").split(",");
+  document.querySelectorAll(".h-perm").forEach((c) => (c.checked = list.includes(c.value)));
+  document.getElementById("hire-box").scrollIntoView({ behavior: "smooth" });
+}
+
+async function hireStaff() {
+  const discord_id = document.getElementById("h-discord").value.trim();
+  const rank = document.getElementById("h-rank").value.trim();
+  const rank_order = +document.getElementById("h-order").value || 100;
+  const perms = [...document.querySelectorAll(".h-perm:checked")].map((c) => c.value);
+  if (!discord_id || !rank) return toast("اكتب الآيدي والرتبة", true);
+  const res = await fetch("/api/admin/staff", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ discord_id, rank, rank_order, perms }),
+  });
+  const d = await res.json();
+  if (res.ok) {
+    toast("✅ انحفظ الإداري");
+    document.getElementById("h-discord").value = "";
+    document.getElementById("h-rank").value = "";
+    document.getElementById("h-order").value = "";
+    document.querySelectorAll(".h-perm").forEach((c) => (c.checked = false));
+    loadStaff();
+  } else toast("❌ " + (d.error || "فشل الحفظ"), true);
+}
+
+async function removeStaff(id) {
+  if (!confirm("متأكد تبي تشيل هالإداري؟")) return;
+  await fetch(`/api/admin/staff/${id}`, { method: "DELETE" });
+  toast("🗑️ انشال الإداري");
+  loadStaff();
+}
 
 /* ---------- Settings ---------- */
 const SETTING_KEYS = ["announcement", "referral_xp", "welcome_xp", "xp_rate", "min_exchange"];
@@ -164,30 +246,56 @@ async function loadAdminUsers() {
       <td>#${u.id}</td>
       <td style="color:var(--text)">${u.username}</td>
       <td>${u.discord_id}</td>
-      <td>${(+u.balance).toFixed(2)}</td>
       <td style="color:var(--orange)">${(+u.dr_balance || 0).toFixed(2)}</td>
       <td>${u.xp}</td>
       <td>${u.rank}</td>
-      <td><button class="btn" onclick="editUser(${u.id}, ${+u.balance}, ${+u.dr_balance || 0}, ${u.xp}, '${u.rank}')">تعديل</button></td>
+      <td>${u.banned ? "🚫 محظور" : "✅"}</td>
+      <td style="white-space:nowrap">
+        ${can("ranks") ? `<button class="btn" onclick="editUser(${u.id}, ${+u.dr_balance || 0}, '${(u.rank || "").replace(/'/g, "\\'")}')">رتبة</button>` : ""}
+        ${can("xp") ? `<button class="btn" onclick="giveXp(${u.id})">+XP</button>` : ""}
+        ${can("ban") ? `<button class="btn btn-danger" onclick="toggleBan(${u.id}, ${!u.banned})">${u.banned ? "فك الحظر" : "حظر"}</button>` : ""}
+      </td>
     </tr>`).join("");
 }
 
-async function editUser(id, balance, dr, xp, rank) {
-  const newBalance = prompt("رصيد DC الجديد:", balance);
-  if (newBalance === null) return;
-  const newDr = prompt("رصيد DR الجديد:", dr);
-  if (newDr === null) return;
-  const newXp = prompt("نقاط XP الجديدة:", xp);
-  if (newXp === null) return;
+async function editUser(id, dr, rank) {
   const newRank = prompt("الرتبة الجديدة:", rank);
   if (newRank === null) return;
+  const newDr = prompt("رصيد DR الجديد:", dr);
+  if (newDr === null) return;
   const res = await fetch(`/api/admin/users/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ balance: +newBalance, dr_balance: +newDr, xp: +newXp, rank: newRank }),
+    body: JSON.stringify({ dr_balance: +newDr, rank: newRank }),
   });
+  const d = await res.json();
   if (res.ok) { toast("✅ تم التعديل"); loadAdminUsers(); }
-  else toast("❌ فشل التعديل", true);
+  else toast("❌ " + (d.error || "فشل التعديل"), true);
+}
+
+async function giveXp(id) {
+  const amount = prompt("كم XP تبي تعطيه؟ (رقم سالب للخصم)", "50");
+  if (amount === null) return;
+  const res = await fetch(`/api/admin/users/${id}/xp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount: +amount }),
+  });
+  const d = await res.json();
+  if (res.ok) { toast(`✅ صار عنده ${d.xp} XP`); loadAdminUsers(); }
+  else toast("❌ " + (d.error || "فشل"), true);
+}
+
+async function toggleBan(id, banned) {
+  if (banned && !confirm("متأكد تبي تحظر هاللاعب؟ ما راح يقدر يدخل الموقع")) return;
+  const res = await fetch(`/api/admin/users/${id}/ban`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ banned }),
+  });
+  const d = await res.json();
+  if (res.ok) { toast(banned ? "🚫 انحظر" : "✅ انفك الحظر"); loadAdminUsers(); }
+  else toast("❌ " + (d.error || "فشل"), true);
 }
 
 /* ---------- Coupons ---------- */

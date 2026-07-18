@@ -82,3 +82,21 @@ INSERT INTO settings (key, value) VALUES
   ('purchase_xp_percent', '100'),
   ('announcement', '')
 ON CONFLICT (key) DO NOTHING;
+
+-- ===== نظام الإدارة والصلاحيات =====
+CREATE TABLE IF NOT EXISTS staff (
+  id SERIAL PRIMARY KEY,
+  discord_id TEXT UNIQUE NOT NULL,
+  rank TEXT NOT NULL DEFAULT 'إداري',
+  rank_order INTEGER NOT NULL DEFAULT 100,
+  perms TEXT NOT NULL DEFAULT '',
+  added_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- حظر اللاعبين
+ALTER TABLE users ADD COLUMN IF NOT EXISTS banned BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- الرتبة الافتراضية: مواطن
+ALTER TABLE users ALTER COLUMN rank SET DEFAULT 'مواطن';
+UPDATE users SET rank = 'مواطن' WHERE rank = 'عضو';

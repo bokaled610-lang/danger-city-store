@@ -38,7 +38,6 @@
     </div>
 
     <div class="dash-grid">
-      <div class="dash-card"><small>💰 رصيد DC</small><b id="dash-balance">—</b></div>
       <div class="dash-card"><small>💎 رصيد DR</small><b id="dash-dr">—</b></div>
       <div class="dash-card"><small>⚡ نقاط XP</small><b id="dash-xp">—</b></div>
       <div class="dash-card"><small>👑 الرتبة</small><b id="dash-rank">—</b></div>
@@ -94,7 +93,6 @@
       document.getElementById("profile-avatar").src = user.avatar;
       document.getElementById("profile-name").textContent = user.username;
       document.getElementById("profile-id").textContent = "#" + user.id;
-      document.getElementById("dash-balance").textContent = (+user.balance).toFixed(2) + " DC";
       document.getElementById("dash-dr").textContent = (+user.dr_balance || 0).toFixed(2) + " DR";
       document.getElementById("dash-xp").textContent = user.xp;
       document.getElementById("dash-rank").textContent = user.rank;

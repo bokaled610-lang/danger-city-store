@@ -42,6 +42,7 @@
       <button class="chip active" data-tab="products">📦 المنتجات</button>
       <button class="chip" data-tab="orders">🛒 الطلبات</button>
       <button class="chip" data-tab="users">👥 المستخدمين</button>
+      <button class="chip" data-tab="staff">👮 الإدارة</button>
       <button class="chip" data-tab="coupons">🏷️ الكوبونات</button>
       <button class="chip" data-tab="logs">📜 السجل</button>
       <button class="chip" data-tab="settings">⚙️ الإعدادات</button>
@@ -67,8 +68,31 @@
     <!-- المستخدمين -->
     <div class="tab-content" id="tab-users">
       <table>
-        <thead><tr><th>#</th><th>الاسم</th><th>Discord ID</th><th>DC</th><th>DR</th><th>XP</th><th>الرتبة</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>الاسم</th><th>Discord ID</th><th>DR</th><th>XP</th><th>الرتبة</th><th>الحالة</th><th></th></tr></thead>
         <tbody id="users-body"></tbody>
+      </table>
+    </div>
+
+    <!-- الإدارة (لوق الإدارة + التوظيف) -->
+    <div class="tab-content" id="tab-staff">
+      <div id="hire-box" style="display:none;background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);padding:18px;margin-bottom:20px">
+        <h3 style="margin-bottom:12px">📋 توظيف / تعديل إداري</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <input class="search" id="h-discord" placeholder="آيدي الديسكورد" style="flex:2;min-width:200px" />
+          <input class="search" id="h-rank" placeholder="الرتبة (مثال: مشرف عام)" style="flex:2;min-width:160px" />
+          <input class="search" id="h-order" type="number" min="1" placeholder="الترتيب (1 = الأعلى)" style="flex:1;min-width:130px" />
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;color:var(--muted)">
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" class="h-perm" value="product" style="width:auto" /> إضافة منتج</label>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" class="h-perm" value="ranks" style="width:auto" /> إعطاء رتب وصلاحيات</label>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" class="h-perm" value="xp" style="width:auto" /> إعطاء XP</label>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" class="h-perm" value="ban" style="width:auto" /> حظر لاعب</label>
+        </div>
+        <button class="btn btn-primary" onclick="hireStaff()">💾 حفظ</button>
+      </div>
+      <table>
+        <thead><tr><th>الرتبة</th><th>الاسم</th><th>Discord ID</th><th>الصلاحيات</th><th></th></tr></thead>
+        <tbody id="staff-body"></tbody>
       </table>
     </div>
 
